@@ -274,18 +274,23 @@ public abstract class ScoreList implements Iterable<Score>
 
         for (int i = 0; i < checkmarkValues.length; i++)
         {
-            double value = checkmarkValues[checkmarkValues.length - i - 1];
+            final int checkmarkValue = checkmarkValues[checkmarkValues.length - i - 1];
+            @Nullable final Double scoreUpdate; // null if no update to score is required
 
             if (habit.isNumerical())
-            {
-                value /= 1000;
-                value /= habit.getTargetValue();
-                value = Math.min(1, value);
-            }
+                scoreUpdate = Math.min(1.0, checkmarkValue / 1000.0 / habit.getTargetValue());
+            else if (checkmarkValue == Checkmark.CHECKED_EXPLICITLY)
+                scoreUpdate = 1.0;
+            else if (checkmarkValue == Checkmark.CHECKED_IMPLICITLY)
+                scoreUpdate = null;
+            else if (checkmarkValue == Checkmark.UNCHECKED)
+                scoreUpdate = 0.0;
+            else
+                throw new IllegalStateException("bad checkmark value:" + checkmarkValue);
 
-            if (!habit.isNumerical() && value > 0) value = 1;
+            if (scoreUpdate != null)
+                previousValue = Score.compute(freq, previousValue, scoreUpdate);
 
-            previousValue = Score.compute(freq, previousValue, value);
             scores.add(new Score(from.plus(i), previousValue));
         }
 
